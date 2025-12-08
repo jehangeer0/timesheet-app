@@ -5,13 +5,6 @@
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +12,67 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Ant Design Primary Color Customization */
+.ant-btn-primary {
+  background-color: #2563eb;
+}
+
+.ant-btn-primary:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: #2563eb !important;
+}
+
+.ant-input:hover {
+  border-color: #2563eb !important;
+}
+
+/* Ant Design Layout Header */
+.ant-layout-header {
+  height: auto;
+  line-height: normal;
+  padding: 16px 24px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f5f5f5;
+}
+
+/* Ant Design Table Customization */
+.ant-table-wrapper .ant-table-container table > thead > tr:first-child > * {
+  background-color: #fafafa !important;
+  font-weight: 600;
+}
+
+.ant-table-wrapper .ant-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Ant Design Form Item */
+.ant-form-item-label > label {
+  font-weight: 500;
 }

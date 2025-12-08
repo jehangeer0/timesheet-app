@@ -1,12 +1,12 @@
-import { Spin, Row, Col } from "antd";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 
-export default function HomePage() {
-  return (
-   <Row className="h-screen bg-white" align="middle" justify="center">
-            <Col className="text-center">
-                <Spin size="large" />
-                <div className="mt-4 text-gray-500">Loading...</div>
-            </Col>
-        </Row>
-  );
+export default async function HomePage() {
+  const session = await auth();
+
+  if (session) {
+    redirect("/dashboard");
+  } else {
+    redirect("/login");
+  }
 }

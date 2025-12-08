@@ -1,58 +1,45 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Dropdown, Button } from "antd"
-import { UserOutlined, DownOutlined } from "@ant-design/icons"
+import { Layout, Button, message } from "antd";
+import { LogoutOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-const Navbar: React.FC = () => {
-  const menu = [
-    {
-      key: "1",
-      label: "Profile",
-    },
-    {
-      key: "2",
-      label: "Settings",
-    },
-    {
-      key: "3",
-      label: "Logout",
-    },
-  ]
+const { Header } = Layout;
+
+export default function Navbar() {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ redirect: false });
+      message.success("Logged out successfully");
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      message.error("Error logging out");
+      console.error("Logout error:", error);
+    }
+  };
 
   return (
-    <nav className="bg-white border-b border-gray-200 px-4 md:px-8 py-4">
-      <div className="flex items-center justify-between max-w-7xl mx-auto">
-        {/* Logo and Navigation Links */}
-        <div className="flex items-center gap-8">
-          <div className="text-2xl font-bold text-gray-900">ticktock</div>
-          <div className="hidden md:flex items-center gap-4">
-            <a href="#" className="text-gray-700 hover:text-gray-900 font-medium">
-              Timesheets
-            </a>
-          </div>
+    <Header className="!bg-white shadow-sm px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-10">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+          <ClockCircleOutlined className="text-white text-xl" />
         </div>
-
-        {/* User Dropdown */}
-        <div className="flex items-center">
-          <Dropdown menu={{ items: menu }} trigger={["click"]}>
-            <Button type="text" className="flex items-center gap-2 text-gray-700 hover:text-gray-900">
-              <UserOutlined />
-              <span className="hidden sm:inline">John Doe</span>
-              <DownOutlined className="text-xs" />
-            </Button>
-          </Dropdown>
-        </div>
-      </div>
-
-      {/* Mobile Navigation */}
-      <div className="md:hidden mt-4 flex items-center gap-4">
-        <a href="#" className="text-gray-700 hover:text-gray-900 font-medium text-sm">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 m-0">
           Timesheets
-        </a>
+        </h1>
       </div>
-    </nav>
-  )
-}
 
-export default Navbar
+      <Button
+        icon={<LogoutOutlined />}
+        onClick={handleLogout}
+        className="flex items-center"
+      >
+        <span className="hidden sm:inline">Logout</span>
+      </Button>
+    </Header>
+  );
+}

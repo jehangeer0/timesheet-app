@@ -1,71 +1,112 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { Table, Select, Pagination } from "antd"
-import type { TableColumnsType, PaginationProps } from "antd"
+import { useState, useEffect } from "react";
+import { Button, Table, message, Spin } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import type { TableColumnsType } from "antd";
+import TimesheetComponent from "../TimeSheets/TimeSheets";
+import CreateTimeSheetModal from "../CreateTimeSheetModal/CreateTimeSheetModal";
+import DateRangeFilter from "../Filters/DateRangeFilter/DateRangeFilter";
+import StatusFilter from "../Filters/StatusFilter/StatusFilter";
+import TimesheetPagination from "../Pagination/Pagination";
+import StatusBadge from "../StatusBadge/StatusBadge";
+import ActionButton from "../ActionButton/ActionButton";
+import { TimesheetRecord } from "@/interface/timeSheetInterface";
+import { timesheetService } from "@/services/timesheetService";
+import { transformTimesheetForUI } from "@/lib/dataTransformers";
 
-interface TimesheetRecord {
-  key: string
-  week: number
-  date: string
-  status: "COMPLETED" | "INCOMPLETE" | "MISSING"
-  action: string
-}
+const TimesheetTable = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
+  const [dateRange, setDateRange] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [selectedTimesheet, setSelectedTimesheet] = useState<TimesheetRecord | null>(null);
+  const [timesheets, setTimesheets] = useState<TimesheetRecord[]>([]);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-const TimesheetTable: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(5)
-  const [dateRange, setDateRange] = useState<string | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string | null>(null)
+  // Fetch timesheets from API
+  useEffect(() => {
+    fetchTimesheets();
+  }, [statusFilter]);
 
-  const allData: TimesheetRecord[] = [
-    { key: "1", week: 1, date: "1 - 5 January, 2024", status: "COMPLETED", action: "View" },
-    { key: "2", week: 2, date: "8 - 12 January, 2024", status: "COMPLETED", action: "View" },
-    { key: "3", week: 3, date: "15 - 19 January, 2024", status: "INCOMPLETE", action: "Update" },
-    { key: "4", week: 4, date: "22 - 26 January, 2024", status: "COMPLETED", action: "View" },
-    { key: "5", week: 5, date: "28 January - 1 February, 2024", status: "MISSING", action: "Create" },
-    { key: "6", week: 6, date: "5 - 9 February, 2024", status: "COMPLETED", action: "View" },
-    { key: "7", week: 7, date: "12 - 16 February, 2024", status: "INCOMPLETE", action: "Update" },
-    { key: "8", week: 8, date: "19 - 23 February, 2024", status: "MISSING", action: "Create" },
-    { key: "9", week: 9, date: "26 February - 1 March, 2024", status: "COMPLETED", action: "View" },
-    { key: "10", week: 10, date: "4 - 8 March, 2024", status: "COMPLETED", action: "View" },
-  ]
+  const fetchTimesheets = async () => {
+    try {
+      setLoading(true);
+      const filters: any = {};
+      if (statusFilter) filters.status = statusFilter;
 
-  // Filter data based on selected filters
-  const filteredData = allData.filter((item) => {
-    if (statusFilter && item.status !== statusFilter) return false
-    return true
-  })
+      const response = await timesheetService.getTimesheets(filters);
 
-  // Paginate the filtered data
-  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+      if (response.success) {
+        const timesheetsWithTasks = await Promise.all(
+          response.data.map(async (ts: any) => {
+            try {
+              const entriesResponse = await timesheetService.getTimesheetEntries(ts.id);
+              return transformTimesheetForUI(ts, entriesResponse.data || []);
+            } catch (error) {
+              console.error(`Error fetching entries for timesheet ${ts.id}:`, error);
+              return transformTimesheetForUI(ts, []);
+            }
+          })
+        );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "#03543F" 
-      case "INCOMPLETE":
-        return "#723B13" 
-      case "MISSING":
-        return "#99154B" 
-      default:
-        return "#d9d9d9" 
+        setTimesheets(timesheetsWithTasks);
+      }
+    } catch (error) {
+      console.error("Error fetching timesheets:", error);
+      message.error("Failed to load timesheets");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
-  const getStatusBgColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "#DEF7EC" 
-      case "INCOMPLETE":
-        return "#FDF6B2" 
-      case "MISSING":
-        return "#FCE8F3" 
-      default:
-        return "#fafafa" 
+  const filteredData = timesheets.filter(item => 
+    !statusFilter || item.status === statusFilter
+  );
+  
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
+  const handleActionClick = (record: TimesheetRecord) => {
+    setSelectedTimesheet(record);
+    if (record.action === "Create") {
+      setIsCreateModalOpen(true);
     }
-  }
+  };
+
+  const handleCreateTimesheet = async (data: any) => {
+    if (!selectedTimesheet) return;
+
+    try {
+      // Extract timesheet ID from key
+      const timesheetId = selectedTimesheet.key;
+
+      // Get the first date from tasks
+      const dates = Object.keys(selectedTimesheet.tasks || {});
+      const taskDate = dates[0] || new Date().toISOString().split('T')[0];
+
+      // Create entry via API
+      await timesheetService.createEntry(timesheetId, {
+        taskName: data.taskDescription,
+        projectName: data.project,
+        workType: data.workType,
+        description: data.taskDescription,
+        hours: data.hours,
+        date: taskDate,
+      });
+
+      message.success("Task added successfully!");
+      setIsCreateModalOpen(false);
+      
+      await fetchTimesheets();
+    } catch (error) {
+      console.error("Error creating task:", error);
+      message.error("Failed to create task");
+    }
+  };
 
   const columns: TableColumnsType<TimesheetRecord> = [
     {
@@ -87,22 +128,7 @@ const TimesheetTable: React.FC = () => {
       dataIndex: "status",
       key: "status",
       width: "25%",
-      render: (status: string) => (
-        <div
-          style={{
-            display: "inline-block",
-            padding: "2px 8px",
-            borderRadius: "6px",
-            backgroundColor: getStatusBgColor(status),
-            color: getStatusColor(status),
-            fontWeight: "600",
-            fontSize: "12px",
-            letterSpacing: "0.5px",
-          }}
-        >
-          {status}
-        </div>
-      ),
+      render: (status) => <StatusBadge status={status} />,
       sorter: (a, b) => a.status.localeCompare(b.status),
     },
     {
@@ -110,92 +136,80 @@ const TimesheetTable: React.FC = () => {
       dataIndex: "action",
       key: "action",
       width: "20%",
-      render: (action: string) => (
-        <a href="#" className="text-blue-500 hover:text-blue-700 font-medium" onClick={(e) => e.preventDefault()}>
-          {action}
-        </a>
+      render: (_, record) => (
+        <ActionButton record={record} onClick={handleActionClick} />
       ),
     },
-  ]
+  ];
 
-  const onPaginationChange: PaginationProps["onChange"] = (page, pageSize) => {
-    setCurrentPage(page)
-    setPageSize(pageSize)
-  }
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Your Timesheets</h1>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <Select
-          placeholder="Date Range"
-          style={{ width: "100%", maxWidth: "200px" }}
-          value={dateRange}
-          onChange={setDateRange}
-          options={[
-            { label: "Last Week", value: "last-week" },
-            { label: "Last Month", value: "last-month" },
-            { label: "Last 3 Months", value: "last-3-months" },
-          ]}
-        />
-        <Select
-          placeholder="Status"
-          style={{ width: "100%", maxWidth: "200px" }}
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={[
-            { label: "All Statuses", value: null },
-            { label: "Completed", value: "COMPLETED" },
-            { label: "Incomplete", value: "INCOMPLETE" },
-            { label: "Missing", value: "MISSING" },
-          ]}
-          allowClear
-        />
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <Table
-          columns={columns}
-          dataSource={paginatedData}
-          pagination={false}
-          size="large"
-          className="timesheet-table"
-          bordered={false}
-          locale={{
-            emptyText: "No timesheets found",
+  if (selectedTimesheet && !isCreateModalOpen) {
+    return (
+      <div>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => setSelectedTimesheet(null)}
+          className="mb-4 text-blue-600 hover:text-blue-700"
+        >
+          Back to Timesheets
+        </Button>
+        <TimesheetComponent
+          timesheet={selectedTimesheet}
+          onUpdate={async () => {
+            await fetchTimesheets();
+            const updated = timesheets.find(ts => ts.key === selectedTimesheet.key);
+            if (updated) setSelectedTimesheet(updated);
           }}
         />
       </div>
+    );
+  }
 
-      {/* Pagination */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-        <Select
-          value={pageSize}
-          onChange={setPageSize}
-          style={{ width: "120px" }}
-          options={[
-            { label: "5 per page", value: 5 },
-            { label: "10 per page", value: 10 },
-            { label: "20 per page", value: 20 },
-          ]}
-        />
-        <Pagination
-          current={currentPage}
-          total={filteredData.length}
-          pageSize={pageSize}
-          onChange={onPaginationChange}
-          showSizeChanger={false}
-          className="flex justify-center"
-        />
+  return (
+    <div className="max-w-7xl mx-auto px-2 md:px-4 py-4">
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Timesheets</h1>
+      
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <StatusFilter value={statusFilter} onChange={setStatusFilter} />
       </div>
-    </div>
-  )
-}
 
-export default TimesheetTable
+      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center items-center py-20">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={paginatedData}
+            pagination={false}
+            size="middle"
+            className="timesheet-table"
+            bordered={false}
+            locale={{ emptyText: "No timesheets found" }}
+          />
+        )}
+      </div>
+
+      <TimesheetPagination
+        currentPage={currentPage}
+        pageSize={pageSize}
+        total={filteredData.length}
+        onPageChange={setCurrentPage}
+        onPageSizeChange={setPageSize}
+      />
+
+      <CreateTimeSheetModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setSelectedTimesheet(null);
+        }}
+        onSubmit={handleCreateTimesheet}
+      />
+    </div>
+  );
+};
+
+export default TimesheetTable;

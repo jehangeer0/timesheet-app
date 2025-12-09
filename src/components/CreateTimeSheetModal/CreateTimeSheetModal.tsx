@@ -19,7 +19,7 @@ interface TimeSheetData {
   hours: number
 }
 
-export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClose, onSubmit }) => {
+export const CreateTimeSheetModal: React.FC<CreateTimeSheetProps> = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState<TimeSheetData>({
     project: "",
     workType: "",
@@ -77,11 +77,13 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
       closeIcon={<CloseOutlined className="text-gray-500 hover:text-gray-700" />}
       width={750}
       centered
-      bodyStyle={{ maxHeight: "550px", overflowY: "auto" }}
+     bodyStyle={{
+    maxHeight: "auto",     
+    overflow: "hidden",    
+  }}
     >
       <div className="space-y-6">
 
-        {/* ROW 1 — Project */}
         <Row gutter={20}>
           <Col span={24}>
             <label className="block text-base font-medium text-gray-900 mb-2">
@@ -102,7 +104,6 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
           </Col>
         </Row>
 
-        {/* ROW 2 — Work Type */}
         <Row gutter={20}>
           <Col span={24}>
             <label className="block text-base font-medium text-gray-900 mb-2">
@@ -123,7 +124,6 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
           </Col>
         </Row>
 
-        {/* ROW 3 — Description */}
         <Row gutter={20}>
           <Col span={24}>
             <label className="block text-base font-medium text-gray-900 mb-2">
@@ -144,7 +144,6 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
           </Col>
         </Row>
 
-        {/* ROW 4 — Hours */}
         <Row>
           <Col span={24}>
             <label className="block text-base font-medium text-gray-900 mb-2">
@@ -177,18 +176,17 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
         </Row>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex gap-3 mt-8">
         <button
           onClick={handleAddEntry}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg transition cursor-pointer"
         >
           Add Entry
         </button>
 
         <button
           onClick={handleCancel}
-          className="flex-1 border-2 border-gray-300 text-gray-700 hover:border-gray-400 font-medium py-3 rounded-lg bg-white transition"
+          className="flex-1 border-2 border-gray-300 text-gray-700 hover:border-gray-400 font-medium py-3 rounded-lg bg-white transition cursor-pointer"
         >
           Cancel
         </button>
@@ -197,4 +195,4 @@ export const CreateTimeSheet: React.FC<CreateTimeSheetProps> = ({ isOpen, onClos
   )
 }
 
-export default CreateTimeSheet
+export default CreateTimeSheetModal

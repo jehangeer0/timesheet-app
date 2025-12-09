@@ -1,112 +1,151 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Progress, Row, Col } from "antd"
-import TimesheetRow from "../TimeSheetRow/TimeSheetRow"
+import { TimesheetRecord } from "@/interface/timeSheetInterface";
+import { timesheetService } from "@/services/timesheetService";
+import { Col, message, Progress, Row } from "antd";
+import { useState } from "react";
+import CreateTimeSheetModal from "../CreateTimeSheetModal/CreateTimeSheetModal";
+import TimesheetRow from "../TimeSheetRow/TimeSheetRow";
 
-interface Task {
-  id: string
-  name: string
-  hours: number
-  projectName: string
+interface TimesheetComponentProps {
+  timesheet: TimesheetRecord;
+  onUpdate?: () => Promise<void>;
 }
 
-interface TimesheetData {
-  [date: string]: Task[]
-}
+const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) => {
+  const [localTimesheet, setLocalTimesheet] = useState<TimesheetRecord>(timesheet);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
-const TimesheetComponent = () => {
-  const [timesheetData] = useState<TimesheetData>({
-    "Jan 21": [
-      { id: "1", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "2", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-    ],
-    "Jan 22": [
-      { id: "3", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "4", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "5", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-    ],
-    "Jan 23": [
-      { id: "6", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "7", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "8", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-    ],
-    "Jan 24": [
-      { id: "9", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "10", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-      { id: "11", name: "Homepage Development", hours: 4, projectName: "Project Name" },
-    ],
-    "Jan 25": [],
-  })
+  const timesheetData = localTimesheet.tasks || {};
 
   const totalHours = Object.values(timesheetData)
     .flat()
-    .reduce((sum, task) => sum + task.hours, 0)
+    .reduce((sum, task) => sum + task.hours, 0);
 
-  const maxHours = 40
-  const progressPercent = (totalHours / maxHours) * 100
+  const maxHours = 40;
+  const progressPercent = (totalHours / maxHours) * 100;
+
+  const handleAddTask = (date: string) => {
+    setSelectedDate(date);
+    setIsModalOpen(true);
+  };
+
+  const handleTaskSubmit = async (data: any) => {
+    try {
+      // Convert display date (e.g., "Jan 1") to API date format
+      const apiDate = convertToApiDate(selectedDate, localTimesheet.week);
+
+      await timesheetService.createEntry(localTimesheet.key, {
+        taskName: data.taskDescription,
+        projectName: data.project,
+        workType: data.workType,
+        description: data.taskDescription,
+        hours: data.hours,
+        date: apiDate,
+      });
+
+      message.success("Task added successfully!");
+      setIsModalOpen(false);
+      
+      if (onUpdate) {
+        await onUpdate();
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      message.error("Failed to create task");
+    }
+  };
+
+  const handleDeleteTask = async (date: string, taskId: string) => {
+    try {
+      await timesheetService.deleteEntry(taskId);
+      message.success("Task deleted successfully!");
+      
+      if (onUpdate) {
+        await onUpdate();
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      message.error("Failed to delete task");
+    }
+  };
+
+  const convertToApiDate = (displayDate: string, week: number): string => {
+    const year = new Date().getFullYear();
+    const [monthStr, day] = displayDate.split(" ");
+    const months: any = {
+      Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+      Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+    };
+    const date = new Date(year, months[monthStr], parseInt(day));
+    return date.toISOString().split('T')[0];
+  };
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-lg p-4 md:p-8">
-
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-lg p-6 md:p-8">
       {/* Header */}
       <Row className="gap-4 mb-8" justify="space-between">
-        {/* Left Side */}
         <Col xs={24} md={12}>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            This week's timesheet
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
+            Week {localTimesheet.week}'s timesheet
           </h1>
-          <p className="text-sm text-gray-600">21 - 26 January, 2024</p>
+          <p className="text-sm text-gray-600">{localTimesheet.dateRange}</p>
         </Col>
 
-        {/* Right Side – Hours Summary */}
         <Col xs={24} md={10}>
           <div className="flex flex-col items-end gap-2">
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900">
-                {totalHours}/40 hrs
-              </p>
-              <p className="text-xs text-gray-500">100%</p>
-            </div>
-            <div className="w-32">
-              <Progress
-                percent={Math.round(progressPercent)}
-                strokeColor="#ff8c00"
-                trailColor="#e5e7eb"
-                showInfo={false}
-                size="small"
-              />
-            </div>
+            <p className="text-lg font-semibold">
+              {totalHours}/{maxHours} hrs
+            </p>
+            <Progress
+              percent={Math.round(progressPercent)}
+              strokeColor="#ff8c00"
+              showInfo={false}
+              className="w-32"
+            />
           </div>
         </Col>
       </Row>
 
-      {/* Timesheet Entries */}
-      <div className="space-y-6">
+      <div className="space-y-8">
         {Object.entries(timesheetData).map(([date, tasks]) => (
           <div key={date}>
-            {/* Date Header */}
             <h2 className="text-lg font-semibold text-gray-900 mb-3">{date}</h2>
 
-            {/* Task Rows */}
             <div className="space-y-2 mb-3">
               {tasks.length > 0 ? (
-                tasks.map((task) => <TimesheetRow key={task.id} task={task} />)
+                tasks.map((task) => (
+                  <TimesheetRow
+                    key={task.id}
+                    task={task}
+                    onDelete={() => handleDeleteTask(date, task.id)}
+                  />
+                ))
               ) : (
-                <div className="text-center py-4"></div>
+                <div className="py-4 text-gray-400 text-sm text-center">
+                  No tasks for this day
+                </div>
               )}
             </div>
 
-            {/* Add Task */}
-            <button className="w-full border-2 border-dashed border-blue-300 rounded-lg py-3 text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 text-sm md:text-base">
-              <span className="text-lg">+</span>
-              Add new task
+            <button
+              onClick={() => handleAddTask(date)}
+              className="w-full border-2 border-dashed border-blue-300 rounded-lg py-2 text-blue-600 hover:bg-blue-50 transition font-medium cursor-pointer"
+            >
+              + Add new task
             </button>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
 
-export default TimesheetComponent
+      <CreateTimeSheetModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleTaskSubmit}
+      />
+    </div>
+  );
+};
+
+export default TimesheetComponent;

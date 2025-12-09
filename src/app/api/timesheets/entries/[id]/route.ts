@@ -1,3 +1,5 @@
+//api/timesheets/entries/[id]/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { mockTimesheetEntries } from "@/data/mockData";
 import { auth } from "@/lib/auth";

@@ -1,3 +1,5 @@
+// lib/timesheetHelpers.ts
+
 import { TimesheetRecord, Task } from "@/interface/timeSheetInterface";
 import { generateWeekDates } from "@/data/timesheets";
 

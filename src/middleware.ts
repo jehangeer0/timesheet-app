@@ -1,34 +1,49 @@
-import { auth } from "@/lib/auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
-export default auth((req) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+const publicRoutes = ['/login', '/'];
+const apiRoutes = ['/api/auth'];
 
-  console.log("Middleware:", {
-    path: nextUrl.pathname,
-    isLoggedIn,
-    hasAuth: !!req.auth,
-    user: req.auth?.user?.email
-  });
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-  const isAuthPage = nextUrl.pathname === "/login";
-  const isRootPage = nextUrl.pathname === "/";
-
-  if (isLoggedIn && isAuthPage) {
-    console.log("Redirecting logged-in user to dashboard");
-    return NextResponse.redirect(new URL("/dashboard", nextUrl));
+  if (pathname.startsWith('/api/auth')) {
+    return NextResponse.next();
   }
 
-  if (!isLoggedIn && !isAuthPage && !isRootPage) {
-    console.log("Redirecting non-logged-in user to login");
-    return NextResponse.redirect(new URL("/login", nextUrl));
-  }
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isApiRoute = pathname.startsWith('/api/');
 
-  console.log("Allowing request to proceed");
-  return NextResponse.next();
-});
+  try {
+    const session = await auth();
+    const isAuthenticated = !!session?.user;
+
+    if (isAuthenticated && pathname === '/login') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    if (!isAuthenticated && !isPublicRoute && !isApiRoute) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Middleware error:', error);
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+}
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+  ],
 };

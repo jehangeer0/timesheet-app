@@ -31,7 +31,6 @@ const TimesheetTable = () => {
     (state) => state.timesheets
   );
 
-  // Fetch timesheets on mount and when filters change
   useEffect(() => {
     const filters: any = {};
     if (statusFilter) filters.status = statusFilter;
@@ -78,7 +77,6 @@ const TimesheetTable = () => {
       message.success("Task added successfully!");
       setIsCreateModalOpen(false);
       
-      // Refetch timesheets to update the list
       await dispatch(fetchTimesheets()).unwrap();
     } catch (error) {
       console.error("Error creating task:", error);
@@ -90,7 +88,6 @@ const TimesheetTable = () => {
     dispatch(setSelectedTimesheet(null));
   };
 
-  // Create a wrapper function for onUpdate that returns Promise<void>
   const handleUpdateTimesheets = async (): Promise<void> => {
     try {
       await dispatch(fetchTimesheets()).unwrap();

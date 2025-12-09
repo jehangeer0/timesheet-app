@@ -35,7 +35,6 @@ const TimeSheetsDetails = ({ timesheet, onUpdate }: TimeSheetsDetailsProps) => {
 
   const handleTaskSubmit = async (data: any) => {
     try {
-      // Convert display date (e.g., "Jan 1") to API date format
       const apiDate = convertToApiDate(selectedDate, timesheet.week);
 
       await dispatch(addTimesheetEntry({

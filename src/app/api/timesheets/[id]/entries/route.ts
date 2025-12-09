@@ -1,5 +1,3 @@
-// app/api/timesheets/[id]/entries/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { mockTimesheetEntries, mockTimesheets } from "@/data/mockData";
 import { auth } from "@/lib/auth";
@@ -51,7 +49,6 @@ export async function POST(
     const body = await req.json();
     const { taskName, projectName, workType, description, hours, date } = body;
 
-    // Validation
     if (!taskName || !projectName || !workType || !hours || !date) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -82,10 +79,8 @@ export async function POST(
       updatedAt: new Date().toISOString(),
     };
 
-    // Add to mock data
     mockTimesheetEntries.push(newEntry);
 
-    // Update timesheet totals
     const timesheetEntries = mockTimesheetEntries.filter(e => e.timesheetId === timesheetId);
     const totalHours = timesheetEntries.reduce((sum, e) => sum + e.hours, 0);
     

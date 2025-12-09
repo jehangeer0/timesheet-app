@@ -1,5 +1,3 @@
-// data/mocdata.ts
-
 import { TimesheetEntry, TimesheetRecord, User } from "@/interface/mockData";
 
 export const mockUsers: User[] = [
@@ -144,7 +142,6 @@ export const mockTimesheets: TimesheetRecord[] = [
   },
 ];
 
-// Mock Timesheet Entries
 export const mockTimesheetEntries: TimesheetEntry[] = [
   // Week 1 entries
   {

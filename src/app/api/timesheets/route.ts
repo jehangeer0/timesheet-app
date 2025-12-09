@@ -1,5 +1,3 @@
-// app/api/timesheets/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
 import { mockTimesheets } from "@/data/mockData";
 import { auth } from "@/lib/auth";

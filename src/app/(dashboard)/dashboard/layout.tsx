@@ -1,4 +1,3 @@
-//src/app/(dashboard)/dashboard/layout.tsx
 
 'use client';
 

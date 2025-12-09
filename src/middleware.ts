@@ -1,4 +1,3 @@
-// middleware.ts
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
@@ -16,19 +15,17 @@ export default auth((req) => {
   const isAuthPage = nextUrl.pathname === "/login";
   const isRootPage = nextUrl.pathname === "/";
 
-  // If logged in and trying to access login page, redirect to dashboard
   if (isLoggedIn && isAuthPage) {
-    console.log("↪️  Redirecting logged-in user to dashboard");
+    console.log("Redirecting logged-in user to dashboard");
     return NextResponse.redirect(new URL("/dashboard", nextUrl));
   }
 
-  // If not logged in and not on login page or root, redirect to login
   if (!isLoggedIn && !isAuthPage && !isRootPage) {
-    console.log("↪️  Redirecting non-logged-in user to login");
+    console.log("Redirecting non-logged-in user to login");
     return NextResponse.redirect(new URL("/login", nextUrl));
   }
 
-  console.log("✅ Allowing request to proceed");
+  console.log("Allowing request to proceed");
   return NextResponse.next();
 });
 

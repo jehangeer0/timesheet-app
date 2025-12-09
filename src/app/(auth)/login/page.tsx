@@ -35,7 +35,6 @@ export default function LoginPage() {
         setLoading(false);
       } else if (result?.ok) {
         message.success("Login successful!");
-        // Use window.location for hard navigation
         window.location.href = "/dashboard";
       }
     } catch (error) {

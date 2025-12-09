@@ -17,14 +17,12 @@ const initialState: TimesheetsState = {
   selectedTimesheet: null,
 };
 
-// Async thunks
 export const fetchTimesheets = createAsyncThunk(
   'timesheets/fetchTimesheets',
   async (filters?: { status?: string; year?: string }) => {
     const response = await timesheetService.getTimesheets(filters);
     
     if (response.success && response.data) {
-      // Fetch entries for each timesheet
       const timesheetsWithEntries = await Promise.all(
         response.data.map(async (ts: any) => {
           try {
@@ -91,7 +89,6 @@ const timesheetsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Fetch timesheets
     builder
       .addCase(fetchTimesheets.pending, (state) => {
         state.loading = true;
@@ -101,7 +98,6 @@ const timesheetsSlice = createSlice({
         state.loading = false;
         state.timesheets = action.payload;
         
-        // Update selected timesheet if it exists
         if (state.selectedTimesheet) {
           const updated = action.payload.find(
             (ts: TimesheetRecord) => ts.key === state.selectedTimesheet?.key
@@ -116,7 +112,6 @@ const timesheetsSlice = createSlice({
         state.error = action.error.message || 'Failed to fetch timesheets';
       });
 
-    // Add entry
     builder
       .addCase(addTimesheetEntry.pending, (state) => {
         state.loading = true;
@@ -129,14 +124,12 @@ const timesheetsSlice = createSlice({
         state.error = action.error.message || 'Failed to add entry';
       });
 
-    // Delete entry
     builder
       .addCase(deleteTimesheetEntry.pending, (state) => {
         state.loading = true;
       })
       .addCase(deleteTimesheetEntry.fulfilled, (state, action) => {
         state.loading = false;
-        // The actual data update will happen when we refetch
       })
       .addCase(deleteTimesheetEntry.rejected, (state, action) => {
         state.loading = false;

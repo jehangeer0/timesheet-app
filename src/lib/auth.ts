@@ -5,58 +5,53 @@ import { mockUsers } from "@/data/mockData";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
+      name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email", type: "email", placeholder: "email@example.com" },
         password: { label: "Password", type: "password" },
       },
-      authorize: async (credentials) => {
-        console.log("🔐 Authorize called with:", { email: credentials?.email });
-        
-        if (!credentials?.email || !credentials?.password) {
-          // console.log("Missing credentials");
-          return null;
-        }
+      async authorize(credentials) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
 
-        const user = mockUsers.find(
-          (u) =>
-            u.email === credentials.email &&
-            u.password === credentials.password
-        );
+          const user = mockUsers.find(
+            (u) => u.email === credentials.email && u.password === credentials.password
+          );
 
-        if (user) {
-          console.log("User found:", { id: user.id, email: user.email });
+          if (!user) {
+            return null;
+          }
+
           return {
             id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,
           };
+        } catch (error) {
+          console.error("Auth error:", error);
+          return null;
         }
-
-        // console.log("User not found");
-        return null;
       },
     }),
   ],
   pages: {
     signIn: "/login",
+    signOut: "/login",
+    error: "/login",
   },
   callbacks: {
-    authorized: async ({ auth }) => {
-      console.log("🔒 Authorized callback:", { hasAuth: !!auth });
-      return !!auth;
-    },
-    jwt: async ({ token, user }) => {
+    async jwt({ token, user }) {
       if (user) {
-        console.log("🎫 JWT callback - adding user to token:", user.id);
         token.id = user.id;
         token.role = user.role;
       }
       return token;
     },
-    session: async ({ session, token }) => {
-      if (token && session.user) {
-        console.log("👤 Session callback - adding token to session:", token.id);
+    async session({ session, token }) {
+      if (session?.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
       }
@@ -65,9 +60,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   secret: process.env.AUTH_SECRET,
-  trustHost: true,
-  debug: true,
+  debug: process.env.NODE_ENV === "development",
 });

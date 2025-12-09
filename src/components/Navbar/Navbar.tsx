@@ -1,25 +1,53 @@
 "use client";
 
-import { Layout, Button, message } from "antd";
+import { Layout, Button, message, Modal } from "antd";
 import { LogoutOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 const { Header } = Layout;
+const { confirm } = Modal;
 
 export default function Navbar() {
   const router = useRouter();
 
   const handleLogout = async () => {
-    try {
-      await signOut({ redirect: false });
-      message.success("Logged out successfully");
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      message.error("Error logging out");
-      console.error("Logout error:", error);
-    }
+    confirm({
+      title: 'Are you sure you want to logout?',
+      content: 'You will be redirected to the login page.',
+      okText: 'Yes, Logout',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: async () => {
+        try {
+          if (typeof window !== 'undefined') {
+            localStorage.clear();
+            sessionStorage.clear();
+          }
+          
+          await signOut({ 
+            redirect: false 
+          });
+          
+          document.cookie.split(";").forEach((c) => {
+            document.cookie = c
+              .replace(/^ +/, "")
+              .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+          });
+          
+          message.success("Logged out successfully");
+          
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 500);
+          
+        } catch (error) {
+          console.error("Logout error:", error);
+          message.error("Error during logout");
+          window.location.href = '/login';
+        }
+      },
+    });
   };
 
   return (
@@ -37,6 +65,8 @@ export default function Navbar() {
         icon={<LogoutOutlined />}
         onClick={handleLogout}
         className="flex items-center"
+        type="primary"
+        danger
       >
         <span className="hidden sm:inline">Logout</span>
       </Button>

@@ -1,4 +1,3 @@
-// lib/auth.ts
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { mockUsers } from "@/data/mockData";
@@ -14,11 +13,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         console.log("🔐 Authorize called with:", { email: credentials?.email });
         
         if (!credentials?.email || !credentials?.password) {
-          console.log("❌ Missing credentials");
+          // console.log("Missing credentials");
           return null;
         }
 
-        // Find user from mock data
         const user = mockUsers.find(
           (u) =>
             u.email === credentials.email &&
@@ -26,7 +24,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (user) {
-          console.log("✅ User found:", { id: user.id, email: user.email });
+          console.log("User found:", { id: user.id, email: user.email });
           return {
             id: user.id,
             email: user.email,
@@ -35,7 +33,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           };
         }
 
-        console.log("❌ User not found");
+        // console.log("User not found");
         return null;
       },
     }),
@@ -71,5 +69,5 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   secret: process.env.AUTH_SECRET,
   trustHost: true,
-  debug: true, // Enable debug mode
+  debug: true,
 });

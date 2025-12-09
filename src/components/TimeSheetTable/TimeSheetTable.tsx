@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Button, Table, message, Spin } from "antd";
 import { ArrowLeftOutlined } from "@ant-design/icons";
 import type { TableColumnsType } from "antd";
-import TimesheetComponent from "../TimeSheets/TimeSheets";
 import CreateTimeSheetModal from "../CreateTimeSheetModal/CreateTimeSheetModal";
 import DateRangeFilter from "../Filters/DateRangeFilter/DateRangeFilter";
 import StatusFilter from "../Filters/StatusFilter/StatusFilter";
@@ -12,54 +11,32 @@ import TimesheetPagination from "../Pagination/Pagination";
 import StatusBadge from "../StatusBadge/StatusBadge";
 import ActionButton from "../ActionButton/ActionButton";
 import { TimesheetRecord } from "@/interface/timeSheetInterface";
-import { timesheetService } from "@/services/timesheetService";
-import { transformTimesheetForUI } from "@/lib/dataTransformers";
+import TimeSheetsDetails from "../TimeSheetsDetails/TimeSheetsDetails";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { 
+  fetchTimesheets, 
+  setSelectedTimesheet,
+  addTimesheetEntry 
+} from "@/store/slices/timesheetsSlice";
 
 const TimesheetTable = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [dateRange, setDateRange] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [selectedTimesheet, setSelectedTimesheet] = useState<TimesheetRecord | null>(null);
-  const [timesheets, setTimesheets] = useState<TimesheetRecord[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  
+  const dispatch = useAppDispatch();
+  const { timesheets, loading, selectedTimesheet } = useAppSelector(
+    (state) => state.timesheets
+  );
 
-  // Fetch timesheets from API
   useEffect(() => {
-    fetchTimesheets();
-  }, [statusFilter]);
-
-  const fetchTimesheets = async () => {
-    try {
-      setLoading(true);
-      const filters: any = {};
-      if (statusFilter) filters.status = statusFilter;
-
-      const response = await timesheetService.getTimesheets(filters);
-
-      if (response.success) {
-        const timesheetsWithTasks = await Promise.all(
-          response.data.map(async (ts: any) => {
-            try {
-              const entriesResponse = await timesheetService.getTimesheetEntries(ts.id);
-              return transformTimesheetForUI(ts, entriesResponse.data || []);
-            } catch (error) {
-              console.error(`Error fetching entries for timesheet ${ts.id}:`, error);
-              return transformTimesheetForUI(ts, []);
-            }
-          })
-        );
-
-        setTimesheets(timesheetsWithTasks);
-      }
-    } catch (error) {
-      console.error("Error fetching timesheets:", error);
-      message.error("Failed to load timesheets");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const filters: any = {};
+    if (statusFilter) filters.status = statusFilter;
+    
+    dispatch(fetchTimesheets(filters));
+  }, [dispatch, statusFilter]);
 
   const filteredData = timesheets.filter(item => 
     !statusFilter || item.status === statusFilter
@@ -71,7 +48,7 @@ const TimesheetTable = () => {
   );
 
   const handleActionClick = (record: TimesheetRecord) => {
-    setSelectedTimesheet(record);
+    dispatch(setSelectedTimesheet(record));
     if (record.action === "Create") {
       setIsCreateModalOpen(true);
     }
@@ -81,30 +58,41 @@ const TimesheetTable = () => {
     if (!selectedTimesheet) return;
 
     try {
-      // Extract timesheet ID from key
       const timesheetId = selectedTimesheet.key;
-
-      // Get the first date from tasks
       const dates = Object.keys(selectedTimesheet.tasks || {});
       const taskDate = dates[0] || new Date().toISOString().split('T')[0];
 
-      // Create entry via API
-      await timesheetService.createEntry(timesheetId, {
-        taskName: data.taskDescription,
-        projectName: data.project,
-        workType: data.workType,
-        description: data.taskDescription,
-        hours: data.hours,
-        date: taskDate,
-      });
+      await dispatch(addTimesheetEntry({
+        timesheetId,
+        entryData: {
+          taskName: data.taskDescription,
+          projectName: data.project,
+          workType: data.workType,
+          description: data.taskDescription,
+          hours: data.hours,
+          date: taskDate,
+        }
+      })).unwrap();
 
       message.success("Task added successfully!");
       setIsCreateModalOpen(false);
       
-      await fetchTimesheets();
+      await dispatch(fetchTimesheets()).unwrap();
     } catch (error) {
       console.error("Error creating task:", error);
-      message.error("Failed to create task");
+      message.error("Failed to create task. Please try again.");
+    }
+  };
+
+  const handleBackToTimesheets = () => {
+    dispatch(setSelectedTimesheet(null));
+  };
+
+  const handleUpdateTimesheets = async (): Promise<void> => {
+    try {
+      await dispatch(fetchTimesheets()).unwrap();
+    } catch (error) {
+      console.error("Failed to update timesheets:", error);
     }
   };
 
@@ -148,18 +136,14 @@ const TimesheetTable = () => {
         <Button
           type="text"
           icon={<ArrowLeftOutlined />}
-          onClick={() => setSelectedTimesheet(null)}
+          onClick={handleBackToTimesheets}
           className="mb-4 text-blue-600 hover:text-blue-700"
         >
           Back to Timesheets
         </Button>
-        <TimesheetComponent
+        <TimeSheetsDetails
           timesheet={selectedTimesheet}
-          onUpdate={async () => {
-            await fetchTimesheets();
-            const updated = timesheets.find(ts => ts.key === selectedTimesheet.key);
-            if (updated) setSelectedTimesheet(updated);
-          }}
+          onUpdate={handleUpdateTimesheets}
         />
       </div>
     );
@@ -204,7 +188,7 @@ const TimesheetTable = () => {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setSelectedTimesheet(null);
+          dispatch(setSelectedTimesheet(null));
         }}
         onSubmit={handleCreateTimesheet}
       />

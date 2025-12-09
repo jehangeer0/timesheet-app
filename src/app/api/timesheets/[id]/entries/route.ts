@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockTimesheetEntries } from "@/data/mockData";
+import { mockTimesheetEntries, mockTimesheets } from "@/data/mockData";
 import { auth } from "@/lib/auth";
 
 // GET entries for a timesheet
@@ -56,8 +56,18 @@ export async function POST(
       );
     }
 
+    // Verify timesheet exists
+    const timesheet = mockTimesheets.find(ts => ts.id === timesheetId);
+    if (!timesheet) {
+      return NextResponse.json(
+        { error: "Timesheet not found" },
+        { status: 404 }
+      );
+    }
+
+    // Create new entry
     const newEntry = {
-      id: `entry-${Date.now()}`,
+      id: `entry-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timesheetId,
       taskName,
       projectName,
@@ -71,11 +81,19 @@ export async function POST(
 
     mockTimesheetEntries.push(newEntry);
 
+    const timesheetEntries = mockTimesheetEntries.filter(e => e.timesheetId === timesheetId);
+    const totalHours = timesheetEntries.reduce((sum, e) => sum + e.hours, 0);
+    
+    timesheet.totalHours = totalHours;
+    timesheet.status = totalHours >= 40 ? "COMPLETED" : "INCOMPLETE";
+    timesheet.updatedAt = new Date().toISOString();
+
     return NextResponse.json({
       success: true,
       data: newEntry,
       message: "Entry created successfully",
-    });
+    }, { status: 201 });
+
   } catch (error) {
     console.error("Error creating entry:", error);
     return NextResponse.json(

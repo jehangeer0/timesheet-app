@@ -1,23 +1,25 @@
 "use client";
 
 import { TimesheetRecord } from "@/interface/timeSheetInterface";
-import { timesheetService } from "@/services/timesheetService";
 import { Col, message, Progress, Row } from "antd";
 import { useState } from "react";
 import CreateTimeSheetModal from "../CreateTimeSheetModal/CreateTimeSheetModal";
 import TimesheetRow from "../TimeSheetRow/TimeSheetRow";
+import { useAppDispatch } from "@/store/hooks";
+import { addTimesheetEntry, deleteTimesheetEntry } from "@/store/slices/timesheetsSlice";
 
-interface TimesheetComponentProps {
+interface TimeSheetsDetailsProps {
   timesheet: TimesheetRecord;
   onUpdate?: () => Promise<void>;
 }
 
-const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) => {
-  const [localTimesheet, setLocalTimesheet] = useState<TimesheetRecord>(timesheet);
+const TimeSheetsDetails = ({ timesheet, onUpdate }: TimeSheetsDetailsProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  
+  const dispatch = useAppDispatch();
 
-  const timesheetData = localTimesheet.tasks || {};
+  const timesheetData = timesheet.tasks || {};
 
   const totalHours = Object.values(timesheetData)
     .flat()
@@ -33,17 +35,19 @@ const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) =>
 
   const handleTaskSubmit = async (data: any) => {
     try {
-      // Convert display date (e.g., "Jan 1") to API date format
-      const apiDate = convertToApiDate(selectedDate, localTimesheet.week);
+      const apiDate = convertToApiDate(selectedDate, timesheet.week);
 
-      await timesheetService.createEntry(localTimesheet.key, {
-        taskName: data.taskDescription,
-        projectName: data.project,
-        workType: data.workType,
-        description: data.taskDescription,
-        hours: data.hours,
-        date: apiDate,
-      });
+      await dispatch(addTimesheetEntry({
+        timesheetId: timesheet.key,
+        entryData: {
+          taskName: data.taskDescription,
+          projectName: data.project,
+          workType: data.workType,
+          description: data.taskDescription,
+          hours: data.hours,
+          date: apiDate,
+        }
+      })).unwrap();
 
       message.success("Task added successfully!");
       setIsModalOpen(false);
@@ -59,7 +63,7 @@ const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) =>
 
   const handleDeleteTask = async (date: string, taskId: string) => {
     try {
-      await timesheetService.deleteEntry(taskId);
+      await dispatch(deleteTimesheetEntry(taskId)).unwrap();
       message.success("Task deleted successfully!");
       
       if (onUpdate) {
@@ -84,13 +88,12 @@ const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) =>
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-lg p-6 md:p-8">
-      {/* Header */}
       <Row className="gap-4 mb-8" justify="space-between">
         <Col xs={24} md={12}>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
-            Week {localTimesheet.week}'s timesheet
+            Week {timesheet.week}'s timesheet
           </h1>
-          <p className="text-sm text-gray-600">{localTimesheet.dateRange}</p>
+          <p className="text-sm text-gray-600">{timesheet.dateRange}</p>
         </Col>
 
         <Col xs={24} md={10}>
@@ -148,4 +151,4 @@ const TimesheetComponent = ({ timesheet, onUpdate }: TimesheetComponentProps) =>
   );
 };
 
-export default TimesheetComponent;
+export default TimeSheetsDetails;

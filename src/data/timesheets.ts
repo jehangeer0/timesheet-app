@@ -1,7 +1,4 @@
-// data/timesheets.ts
-
 import { Task, TimesheetRecord } from "@/interface/timeSheetInterface";
-
 
 export const mockTimesheets: TimesheetRecord[] = [
   {
@@ -245,12 +242,10 @@ export const mockTimesheets: TimesheetRecord[] = [
 
 
 
-// Helper function to generate week dates
 export const generateWeekDates = (weekNumber: number): string[] => {
   const dates: string[] = [];
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   
-  // Simple logic to generate 5 dates for a week
   for (let i = 0; i < 5; i++) {
     const day = (weekNumber - 1) * 7 + i + 1;
     const month = Math.floor(day / 30);
@@ -261,7 +256,6 @@ export const generateWeekDates = (weekNumber: number): string[] => {
   return dates;
 };
 
-// Helper to generate new timesheet
 export const createNewTimesheet = (weekNumber: number): TimesheetRecord => {
   const weekDates = generateWeekDates(weekNumber);
   const tasks: { [date: string]: Task[] } = {};

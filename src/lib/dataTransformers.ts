@@ -1,12 +1,10 @@
 import { TimesheetRecord as ApiTimesheet, TimesheetEntry } from "@/interface/mockData";
 import { TimesheetRecord as UiTimesheet, Task } from "@/interface/timeSheetInterface";
 
-// Transform API timesheet + entries to UI format
 export function transformTimesheetForUI(
   apiTimesheet: ApiTimesheet,
   entries: TimesheetEntry[]
 ): UiTimesheet {
-  // Group entries by date
   const tasksByDate: { [date: string]: Task[] } = {};
 
   entries.forEach((entry) => {
@@ -25,7 +23,6 @@ export function transformTimesheetForUI(
     });
   });
 
-  // Generate all weekday dates even if no entries
   const weekDates = generateWeekDates(apiTimesheet.startDate, apiTimesheet.endDate);
   weekDates.forEach((date) => {
     const dateKey = formatDate(date);
@@ -45,7 +42,6 @@ export function transformTimesheetForUI(
   };
 }
 
-// Get action based on status
 function getAction(status: string): string {
   switch (status) {
     case "COMPLETED":
@@ -59,21 +55,18 @@ function getAction(status: string): string {
   }
 }
 
-// Format date for display (e.g., "Jan 1")
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return `${months[date.getMonth()]} ${date.getDate()}`;
 }
 
-// Format date range (e.g., "1 January")
 function formatDateRange(dateString: string): string {
   const date = new Date(dateString);
   const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   return `${date.getDate()} ${months[date.getMonth()]}`;
 }
 
-// Generate all dates in a week
 function generateWeekDates(startDate: string, endDate: string): string[] {
   const dates: string[] = [];
   const current = new Date(startDate);

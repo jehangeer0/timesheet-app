@@ -32,15 +32,15 @@ export default function LoginPage() {
 
       if (result?.error) {
         message.error("Invalid email or password");
-      } else {
+        setLoading(false);
+      } else if (result?.ok) {
         message.success("Login successful!");
-        router.push("/dashboard");
-        router.refresh();
+        // Use window.location for hard navigation
+        window.location.href = "/dashboard";
       }
     } catch (error) {
       message.error("An error occurred. Please try again.");
       console.error("Login error:", error);
-    } finally {
       setLoading(false);
     }
   };

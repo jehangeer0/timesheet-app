@@ -1,24 +1,32 @@
+// app/api/timesheets/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { mockTimesheets } from "@/data/mockData";
 import { auth } from "@/lib/auth";
+import { mockTimesheets } from "@/data/mockData";
 
+// GET all timesheets for logged-in user
 export async function GET(req: NextRequest) {
   try {
-    // Check authentication
     const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const userId = session.user.id;
-
-    // Get query parameters for filtering
+    // Get query params
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const year = searchParams.get("year");
 
-    // Filter timesheets by user
-    let userTimesheets = mockTimesheets.filter((ts) => ts.userId === userId);
+    // TypeScript knows session.user exists here because of the check above
+    const userId = session.user.id;
+
+    // Filter timesheets for the logged-in user
+    let userTimesheets = mockTimesheets.filter(
+      (ts) => ts.userId === userId
+    );
 
     // Apply filters
     if (status) {
@@ -26,9 +34,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (year) {
-      userTimesheets = userTimesheets.filter(
-        (ts) => ts.year === parseInt(year)
-      );
+      userTimesheets = userTimesheets.filter((ts) => ts.year.toString() === year);
     }
 
     // Simulate API delay
@@ -42,37 +48,49 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching timesheets:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch timesheets" },
       { status: 500 }
     );
   }
 }
 
+// POST: Create new timesheet
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
-    if (!session || !session.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
     const body = await req.json();
     const { week, year, startDate, endDate } = body;
 
-    // Create new timesheet
-    const newTimesheet: any = {
+    if (!week || !year || !startDate || !endDate) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    const newTimesheet = {
       id: `ts-${Date.now()}`,
-      userId: session.user.id,
-      week,
-      year,
+      userId: userId,
+      week: parseInt(week),
+      year: parseInt(year),
       startDate,
       endDate,
-      status: "MISSING" as const,
+      status: "INCOMPLETE" as const,
       totalHours: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    // In a real app, save to database
     mockTimesheets.push(newTimesheet);
 
     // Simulate API delay
@@ -86,7 +104,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating timesheet:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to create timesheet" },
       { status: 500 }
     );
   }
